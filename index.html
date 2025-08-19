@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Memorice Matemático</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: linear-gradient(135deg, #f5f5f5, #dcdcdc);
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      margin: 20px;
+    }
+
+    #controls {
+      margin: 20px;
+    }
+
+    select, button {
+      padding: 8px 12px;
+      margin: 5px;
+      font-size: 14px;
+      border-radius: 8px;
+    }
+
+    #board {
+      display: grid;
+      gap: 10px;
+      justify-content: center;
+      margin: 20px auto;
+      max-width: 800px;
+    }
+
+    .card {
+      width: 120px;
+      height: 120px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.3s;
+      color: white;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    .card.correct {
+      background-color: #28a745 !important;
+      cursor: default;
+    }
+
+    .card.wrong {
+      background-color: red !important;
+    }
+
+    #score, #timer {
+      font-size: 18px;
+      margin: 10px;
+      font-weight: bold;
+    }
+
+    /* Colores por curso */
+    .curso-1 .card { background-color: #007bff; } /* Azul */
+    .curso-2 .card { background-color: #28a745; } /* Verde */
+    .curso-3 .card { background-color: #6f42c1; } /* Violeta */
+    .curso-4 .card { background-color: #fd7e14; } /* Naranja */
+  </style>
+</head>
+<body>
+  <h1>🧠 Memorice Matemático</h1>
+  <div id="controls">
+    <label>Curso:
+      <select id="curso">
+        <option value="1">1° Medio</option>
+        <option value="2">2° Medio</option>
+        <option value="3">3° Medio</option>
+        <option value="4">4° Medio</option>
+      </select>
+    </label>
+    <label>Dificultad:
+      <select id="dificultad">
+        <option value="facil">Fácil</option>
+        <option value="medio">Medio</option>
+        <option value="dificil">Difícil</option>
+        <option value="extremo">Extremo</option>
+      </select>
+    </label>
+    <button onclick="iniciarJuego()">Iniciar Juego</button>
+  </div>
+
+  <div id="score">Puntaje: 0</div>
+  <div id="timer">Tiempo: 0</div>
+
+  <div id="board"></div>
+
+  <script>
+    const bancoOperaciones = {
+      1: {
+        facil: [
+          ["(x+2)²", "x²+4x+4"],
+          ["2x+3=7", "x=2"],
+          ["A(1,2), B(3,4)", "Pendiente=1"],
+        ],
+        medio: [
+          ["Sistema: x+y=5, x-y=1", "x=3, y=2"],
+          ["(x+3)(x-3)", "x²-9"],
+          ["y=2x+1", "Recta pendiente 2"],
+        ],
+        dificil: [
+          ["Homotecia k=2 (2,3)", "(4,6)"],
+          ["Nube: (1,2)(2,4)(3,6)", "y=2x"],
+          ["x²+6x+9", "(x+3)²"],
+        ],
+        extremo: [
+          ["Sistema: 2x+3y=12, x-y=1", "x=3, y=2"],
+          ["(x+1)³", "x³+3x²+3x+1"],
+          ["Datos: (1,2)(2,5)(3,10)", "Relación cuadrática"],
+        ]
+      },
+      2: {
+        facil: [
+          ["√49", "7"],
+          ["2³", "8"],
+          ["log₁₀(100)", "2"],
+        ],
+        medio: [
+          ["x²-5x+6=0", "x=2,3"],
+          ["f(x)=x²", "Parábola"],
+          ["cos(60°)", "0.5"],
+        ],
+        dificil: [
+          ["log₂(8)", "3"],
+          ["Sen(30°)", "0.5"],
+          ["Función inversa: f(x)=2x+1", "f⁻¹(x)=(x-1)/2"],
+        ],
+        extremo: [
+          ["Var. Aleatoria: P(X=1)=0.3, P(X=2)=0.7", "E(X)=1.7"],
+          ["Ecuación: x²+4x+3=0", "x=-1,-3"],
+          ["Cambio %: de 100 a 120", "20%"],
+        ]
+      },
+      3: {
+        facil: [
+          ["i²", "-1"],
+          ["Circunferencia centro (0,0), r=5", "x²+y²=25"],
+          ["Media de 2,4,6", "4"],
+        ],
+        medio: [
+          ["(2+3i)+(1+4i)", "3+7i"],
+          ["Función: f(x)=2^x", "Exponencial"],
+          ["Mediana: 1,3,5,7,9", "5"],
+        ],
+        dificil: [
+          ["Circunferencia (x-2)²+(y+1)²=9", "Centro(2,-1), r=3"],
+          ["log₁₀(1000)", "3"],
+          ["Varianza: 2,4,6", "2.67"],
+        ],
+        extremo: [
+          ["(1+i)²", "2i"],
+          ["Función log: f(x)=ln(x)", "Dominio x>0"],
+          ["Desvío Estándar: 2,4,6", "√2.67"],
+        ]
+      },
+      4: {
+        facil: [
+          ["(x+1)(x+2)", "x²+3x+2"],
+          ["Media: 10,20,30", "20"],
+          ["Prob: cara de moneda", "0.5"],
+        ],
+        medio: [
+          ["(a+b)²", "a²+2ab+b²"],
+          ["Circunferencia: centro(0,0),r=2", "x²+y²=4"],
+          ["Moda: 2,2,3,4", "2"],
+        ],
+        dificil: [
+          ["Binomio: (x-1)(x²+x+1)", "x³-1"],
+          ["Azar: dado P(par)", "3/6=0.5"],
+          ["Geometría: área círculo r=3", "9π"],
+        ],
+        extremo: [
+          ["Prob: 2 lanzamientos de moneda (2 caras)", "0.25"],
+          ["Datos y azar: varianza 5,7,9", "2.67"],
+          ["Geometría: volumen cubo arista 4", "64"],
+        ]
+      }
+    };
+
+    let score = 0;
+    let firstCard = null;
+    let lockBoard = false;
+    let timer;
+    let timeLeft = 0;
+
+    function iniciarJuego() {
+      const curso = document.getElementById("curso").value;
+      const dificultad = document.getElementById("dificultad").value;
+      const board = document.getElementById("board");
+      board.innerHTML = "";
+      score = 0;
+      document.getElementById("score").innerText = "Puntaje: " + score;
+
+      // Tiempo según dificultad
+      if (dificultad === "facil") timeLeft = 480;
+      else if (dificultad === "medio") timeLeft = 360;
+      else if (dificultad === "dificil") timeLeft = 240;
+      else timeLeft = 180;
+
+      clearInterval(timer);
+      timer = setInterval(() => {
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          alert("⏰ Se acabó el tiempo!");
+        } else {
+          timeLeft--;
+          document.getElementById("timer").innerText = "Tiempo: " + timeLeft + "s";
+        }
+      }, 1000);
+
+      const ejercicios = bancoOperaciones[curso][dificultad];
+      let cartas = [];
+      ejercicios.forEach(([p, r]) => {
+        cartas.push({text: p, pair: r});
+        cartas.push({text: r, pair: p});
+      });
+
+      cartas.sort(() => Math.random() - 0.5);
+
+      board.className = "curso-" + curso;
+      board.style.gridTemplateColumns = `repeat(${Math.sqrt(cartas.length)}, 1fr)`;
+
+      cartas.forEach(c => {
+        const div = document.createElement("div");
+        div.classList.add("card");
+        div.innerText = c.text;
+        div.dataset.pair = c.pair;
+        div.onclick = () => clickCard(div);
+        board.appendChild(div);
+      });
+    }
+
+    function clickCard(card) {
+      if (lockBoard || card.classList.contains("correct")) return;
+
+      if (!firstCard) {
+        firstCard = card;
+      } else {
+        if (firstCard === card) return;
+
+        if (firstCard.dataset.pair === card.innerText) {
+          firstCard.classList.add("correct");
+          card.classList.add("correct");
+          score += 10;
+        } else {
+          lockBoard = true;
+          firstCard.classList.add("wrong");
+          card.classList.add("wrong");
+          score -= 5;
+          setTimeout(() => {
+            firstCard.classList.remove("wrong");
+            card.classList.remove("wrong");
+            lockBoard = false;
+          }, 800);
+        }
+        document.getElementById("score").innerText = "Puntaje: " + score;
+        firstCard = null;
+      }
+    }
+  </script>
+</body>
+</html>
