@@ -31,7 +31,7 @@
     margin-bottom: 1em;
   }
   .card {
-    background: #e0e0e0;
+    background: #eee;
     border: 2px solid #ccc;
     height: 110px;
     display: flex;
@@ -41,7 +41,7 @@
     font-size: 1rem;
     cursor: pointer;
     user-select: none;
-    color: transparent;
+    color: black; /* cartas visibles desde el inicio */
     transition: background-color 0.3s, color 0.3s;
     padding: 0.5em;
     text-align: center;
@@ -49,12 +49,12 @@
     box-shadow: 0 3px 6px rgba(0,0,0,0.1);
   }
   .card.flipped {
-    background: #ffeb3b;
+    background: #4caf50;
     color: black;
     cursor: default;
   }
   .card.matched {
-    background: #4caf50;
+    background: #2e7d32;
     color: white;
     cursor: default;
   }
@@ -79,7 +79,7 @@
     text-align: center;
     margin-bottom: 1em;
   }
-  /* Colores para dificultad */
+
   .board-facil .card { border-color: #81c784; }
   .board-medio .card { border-color: #4caf50; }
   .board-dificil .card { border-color: #388e3c; }
@@ -118,8 +118,22 @@
 <div id="explanation"></div>
 
 <script>
-  const bancoOperaciones = { /* Aquí va todo el banco de ejercicios tal como en tu versión anterior */ };
-  const tiemposDificultad = { facil: 8*60, medio: 6*60, dificil: 4*60, extremo: 3*60 };
+  const bancoOperaciones = {
+    "1medio": {
+      "facil": [
+        { pregunta: "Simplifica: (a + b)²", respuesta: "a² + 2ab + b²", explicacion: "Producto notable cuadrado de binomio" },
+        { pregunta: "Suma: 2x + 3x", respuesta: "5x", explicacion: "Suma de términos semejantes" },
+        { pregunta: "Resuelve: x + 3 = 7", respuesta: "4", explicacion: "Despeja x" },
+        { pregunta: "Área rectángulo base 4 cm altura 5 cm", respuesta: "20", explicacion: "Área = base × altura" },
+        { pregunta: "Representa datos en gráfico XY", respuesta: "Puntos en plano", explicacion: "Nube de puntos" },
+        { pregunta: "Sistema: x + y = 3, x - y = 1", respuesta: "x=2, y=1", explicacion: "Suma y resta para despejar" },
+        { pregunta: "Homotecia: escala 2, punto (3,4)", respuesta: "(6,8)", explicacion: "Multiplica coordenadas por escala" },
+        { pregunta: "Simplifica: 3(x + 2)", respuesta: "3x + 6", explicacion: "Distribución" }
+      ]
+    }
+  };
+
+  const tiemposDificultad = { facil: 8 * 60 };
 
   const board = document.getElementById("board");
   const cursoSelect = document.getElementById("curso-select");
@@ -129,12 +143,8 @@
   const scoreboard = document.getElementById("scoreboard");
   const timerDisplay = document.getElementById("timer");
 
-  let cursoActual = cursoSelect.value;
-  let dificultadActual = dificultadSelect.value;
   let puntaje = 0;
   let cartasSeleccionadas = [];
-  let temporizador = null;
-  let tiempoRestante = 0;
   let bloqueoClick = false;
 
   function mezclarArray(array) {
@@ -150,134 +160,63 @@
     actualizarPuntaje();
     cartasSeleccionadas = [];
     explanationDiv.textContent = "";
-    clearInterval(temporizador);
 
-    cursoActual = cursoSelect.value;
-    dificultadActual = dificultadSelect.value;
-
-    const ejercicios = bancoOperaciones[cursoActual][dificultadActual];
-    if (!ejercicios) { alert("No hay ejercicios para esta combinación."); return; }
-
-    board.innerHTML = "";
-    board.className = "board-" + dificultadActual;
-
+    const ejercicios = bancoOperaciones["1medio"]["facil"];
     const seleccion = mezclarArray(ejercicios).slice(0, 8);
     const cartas = [];
     seleccion.forEach((item, index) => {
-      cartas.push({id:index, tipo:"pregunta", text:item.pregunta, explicacion:item.explicacion});
-      cartas.push({id:index, tipo:"respuesta", text:item.respuesta, explicacion:item.explicacion});
+      cartas.push({ id: index, tipo: "pregunta", text: item.pregunta, explicacion: item.explicacion });
+      cartas.push({ id: index, tipo: "respuesta", text: item.respuesta, explicacion: item.explicacion });
     });
-    mezclarArray(cartas);
 
+    mezclarArray(cartas);
+    board.innerHTML = "";
     cartas.forEach(c => {
       const cardDiv = document.createElement("div");
-      cardDiv.classList.add("card");
+      cardDiv.classList.add("card", "flipped"); // desde inicio volteadas
       cardDiv.dataset.id = c.id;
       cardDiv.dataset.tipo = c.tipo;
       cardDiv.dataset.text = c.text;
       cardDiv.dataset.explicacion = c.explicacion;
-      cardDiv.textContent = ""; // siempre dada vuelta al inicio
+      cardDiv.textContent = c.text; // mostrar contenido desde el inicio
       cardDiv.addEventListener("click", manejarClickCarta);
       board.appendChild(cardDiv);
     });
-
-    iniciarTemporizador();
   }
 
   function manejarClickCarta(e) {
     if (bloqueoClick) return;
     const carta = e.currentTarget;
-    if (carta.classList.contains("flipped") || carta.classList.contains("matched")) return;
-
-    carta.classList.add("flipped");
-    carta.textContent = carta.dataset.text;
+    if (carta.classList.contains("matched")) return;
 
     cartasSeleccionadas.push(carta);
 
     if (cartasSeleccionadas.length === 2) {
       bloqueoClick = true;
       const [primera, segunda] = cartasSeleccionadas;
-
       if (primera.dataset.id === segunda.dataset.id && primera.dataset.tipo !== segunda.dataset.tipo) {
         primera.classList.add("matched");
         segunda.classList.add("matched");
         puntaje += 10;
         explanationDiv.textContent = "¡Correcto! " + primera.dataset.explicacion;
-        setTimeout(() => {
-          bloqueoClick = false;
-          explanationDiv.textContent = "";
-          revisarFinJuego();
-        }, 1500);
       } else {
         puntaje = Math.max(0, puntaje - 5);
         explanationDiv.textContent = "Incorrecto. " + (segunda.dataset.explicacion || "Revisa bien el ejercicio.");
-        primera.classList.add("wrong");
-        segunda.classList.add("wrong");
-        setTimeout(() => {
-          primera.classList.remove("flipped", "wrong");
-          segunda.classList.remove("flipped", "wrong");
-          primera.textContent = "";
-          segunda.textContent = "";
-          explanationDiv.textContent = "";
-          bloqueoClick = false;
-        }, 1500);
       }
-      actualizarPuntaje();
-      cartasSeleccionadas = [];
+      setTimeout(() => {
+        cartasSeleccionadas = [];
+        bloqueoClick = false;
+        explanationDiv.textContent = "";
+        actualizarPuntaje();
+      }, 1000);
     }
   }
 
-  function actualizarPuntaje() { scoreboard.textContent = `Puntaje: ${puntaje}`; }
-
-  function revisarFinJuego() {
-    const todasCartas = Array.from(board.querySelectorAll(".card"));
-    if (todasCartas.every(c => c.classList.contains("matched"))) {
-      clearInterval(temporizador);
-      explanationDiv.textContent = "¡Felicidades! Terminaste el juego.";
-      bloquearCartas();
-    }
-  }
-
-  function iniciarTemporizador() {
-    clearInterval(temporizador);
-    tiempoRestante = tiemposDificultad[dificultadActual];
-    actualizarTiempo();
-    temporizador = setInterval(() => {
-      tiempoRestante--;
-      actualizarTiempo();
-      if (tiempoRestante <= 0) {
-        clearInterval(temporizador);
-        explanationDiv.textContent = "¡Se acabó el tiempo!";
-        bloquearCartas();
-        bloqueoClick = true;
-      }
-    }, 1000);
-  }
-
-  function actualizarTiempo() {
-    const minutos = Math.floor(tiempoRestante / 60).toString().padStart(2, "0");
-    const segundos = (tiempoRestante % 60).toString().padStart(2, "0");
-    timerDisplay.textContent = `Tiempo: ${minutos}:${segundos}`;
-  }
-
-  function bloquearCartas() {
-    const todasCartas = Array.from(board.querySelectorAll(".card"));
-    todasCartas.forEach(c => {
-      c.removeEventListener("click", manejarClickCarta);
-      c.classList.add("flipped");
-      c.textContent = c.dataset.text;
-    });
+  function actualizarPuntaje() {
+    scoreboard.textContent = `Puntaje: ${puntaje}`;
   }
 
   startBtn.addEventListener("click", crearCartas);
-  cursoSelect.addEventListener("change", () => { cursoActual = cursoSelect.value; });
-  dificultadSelect.addEventListener("change", () => { 
-    dificultadActual = dificultadSelect.value;
-    board.className = "board-" + dificultadActual;
-  });
-
-  board.className = "board-" + dificultadActual;
-  timerDisplay.textContent = "Tiempo: 00:00";
 </script>
 
 </body>
